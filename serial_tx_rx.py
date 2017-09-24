@@ -91,9 +91,6 @@ class Application(Frame):
     def getID(self):
         self.ser.write('@connect!')
         self.isREading = True
-        self.readThread = threading.Thread(target=self.readDataFromDevice)
-        self.readThread.start()
-
 
     def connectDevice(self):
         global portValue
@@ -105,6 +102,8 @@ class Application(Frame):
             self.ser = serial.Serial(port=portValue, baudrate=9600)
             self.sendLog.insert("end", self.ser.name + "   Connected" + "\n")
             self.getID()
+            self.readThread = threading.Thread(target=self.readDataFromDevice)
+            self.readThread.start()
         except serial.SerialException:
             self.showErrorMessage("Enter Valid PORT")
 
@@ -117,18 +116,22 @@ class Application(Frame):
 
 
     def readDataFromDevice(self):
+        global recvData
+        recvData = False
         while self.isREading:
             try:
                 data = []
                 line = self.ser.readline()
                 if(len(line) > 0 and line != "\n"):
                     logLine = ''
-                    recvData = False
-                    line = line.replace('\n', ' ')
-                    print line
+                    # print line
+                    line = line.replace('\n','')
                     if(line.startswith('TX in progress')):
-                        logLine = logLine + line  + '  ' + \
-                            datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S") 
+                        logLine = datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S") + '   ' + logLine + line 
+                        data.append(logLine)
+                    elif(line.startswith('LoRa kit ready')):
+                        self.getID()
+                        logLine = datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S") + '   ' + logLine + line
                         data.append(logLine)
                     elif(line.startswith('$dev:')):
                             devid = line.partition(':')[-1].rpartition('#')[0]
@@ -137,19 +140,19 @@ class Application(Frame):
                             self.deviceIDTextVal.insert(END, devid.upper())
                             # self.deviceIDTextVal.config(state='disabled')
                     elif(line.startswith('TX done')):
-                        logLine = logLine + line + sendDataBox.get() + '  ' + \
-                            datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S") 
+                        logLine = datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")+'   '+ logLine + line + "\"" + sendDataBox.get() + "\"" 
                         data.append(logLine)
                     elif(line.startswith('downlink:')):
                         recvData = True
                     else:
                         if(recvData == True):
-                            logLine = logLine +'RX came' + line + '  ' + \
-                                datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S") 
+                            logLine = datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S") + '   ' + \
+                                logLine + 'RX ' + "\"" + line + "\""
+                            data.append(logLine)
+                            recvData = False
                         else:
                             data.append(line)
-                            logLine = logLine + line + '  ' + \
-                                datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S") 
+                            logLine = datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S") +'   ' + logLine + line 
                             data.append(logLine)
                     if(len(data) > 0):
                         self.sendLog.insert("end", data)
