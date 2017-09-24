@@ -54,6 +54,7 @@ class Application(Frame):
         self.SENDDATA = Button(self)
         self.SENDDATA["text"] = "Send"
         self.SENDDATA.pack({"side": "left"})
+        self.SENDDATA["command"] = self.writeDataToDevice
         self.SENDDATA.place(relx=0.6, rely=0.05)
 
         self.QUIT = Button(self)
@@ -61,6 +62,17 @@ class Application(Frame):
         self.QUIT["command"] = self.quitApp
         self.QUIT.pack({"side": "left"})
         self.QUIT.place(relx=0.9, rely=0.01)
+
+        self.sendLog = Text(master, borderwidth=2, height=40, width=50)
+        self.sendLog.place(relx=0.01, rely=0.15)
+        self.sendLog.insert(END, "Sent Data \n")
+        # self.sendLog.config(state='disabled')
+
+        self.recvLog = Text(master, height=40, width=50)
+        self.recvLog.place(relx=0.51, rely=0.15)
+        self.recvLog.insert(END, "Recv Data \n")
+        # self.sendLog.config(state='disabled')
+
 
         self.pack(fill=BOTH, expand=1)
 
@@ -74,8 +86,10 @@ class Application(Frame):
         self.readThread.start()
 
 
-    def writeDataToDevice(self,data):
-        writeData = '$' + data + '#'
+    def writeDataToDevice(self):
+        global sendDataBox
+        sdata = sendDataBox.get()
+        writeData = '$' + sdata + '#'
         self.ser.write(writeData)
 
 
@@ -87,9 +101,10 @@ class Application(Frame):
                 data = []
                 data.append(self.ser.readline())
                 logTime = datetime.datetime.now()
-                data.append("          ")
+                data.append(":::")
                 data.append(str(logTime))
-                print data 
+                self.recvLog.insert("end", data)
+                self.recvLog.insert("end", "\n")
             except serial.SerialException:
                 print("SERIAL EXCEPTION HANDLED")
 
