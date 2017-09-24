@@ -38,6 +38,15 @@ class Application(Frame):
         sendText.insert(END, "Enter DATA Here")
         sendText.config(state='disabled')
 
+        deviceIDText = Text(master, height=2, width=25)
+        deviceIDText.place(relx=0.1, rely=0.09)
+        deviceIDText.insert(END, "Device ID")
+        deviceIDText.config(state='disabled')
+
+        self.deviceIDTextVal = Text(master, height=2, width=25)
+        self.deviceIDTextVal.place(relx=0.3, rely=0.09)
+        self.deviceIDTextVal.config(state='disabled')
+
         global portEditBox
         portEditBox = Entry(master)
         portEditBox.place(relx=0.3, rely=0.01)
@@ -80,8 +89,10 @@ class Application(Frame):
     def getID(self):
         global deviceId
         self.ser.write('@connect!')
-        iddata = self.ser.readline()
-        print iddata
+        self.isREading = True
+        self.readThread = threading.Thread(target=self.readDataFromDevice)
+        self.readThread.start()
+
 
     def connectDevice(self):
         global portValue
@@ -89,10 +100,6 @@ class Application(Frame):
         self.ser = serial.Serial(port=portValue, baudrate=9600)
         self.sendLog.insert("end", self.ser.name + "   Connected" + "\n")
         self.getID()
-        self.isREading = True
-        self.readThread = threading.Thread(target=self.readDataFromDevice)
-        self.readThread.start()
-
 
     def writeDataToDevice(self):
         global sendDataBox
@@ -101,18 +108,26 @@ class Application(Frame):
         self.ser.write(writeData)
 
 
+
     def readDataFromDevice(self):
-        startDT = datetime.datetime.now()
-        print (str(startDT))
         while self.isREading:
             try:
                 data = []
-                data.append(self.ser.readline())
-                logTime = datetime.datetime.now()
-                data.append("   ")
-                data.append(str(logTime))
-                self.sendLog.insert("end", data)
-                self.sendLog.insert("end", "\n")
+                line = self.ser.readline()
+                if(len(line) > 0):
+                    if(line.startswith('$dev:')):
+                        devid = line.partition(':')[-1].rpartition('#')[0]
+                        print ("DEVID IS  " + devid)
+                        self.deviceIDTextVal.insert(END, devid)
+                    else:
+                        data.append(line)
+                        logTime = datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+                        data.append("   ")
+                        data.append(str(logTime))
+                        self.sendLog.insert("end", data)
+                        self.sendLog.insert("end", "\n")
+                else:
+                    print("NO DATA")
             except serial.SerialException:
                 print("SERIAL EXCEPTION HANDLED")
 
