@@ -6,9 +6,14 @@ import serial
 from Tkinter import *
 from tkMessageBox import *
 import binascii
+import datetime
+import threading
+
 
 global sendData
 global recvData
+global portValue
+global portEditBox
 
 
 class Application(Frame):
@@ -23,18 +28,44 @@ class Application(Frame):
         T.pack()
         T.insert(END, "Enter COM Here")
         T.config(state='disabled')
-        global editBox
-        editBox = Entry(master)
-        editBox.grid(padx=10, pady=10)
-        editBox.pack()
+        self.DATAT = Text(root, height=10, width=70)
+        self.DATAT.pack()
+        global portEditBox
+        portEditBox = Entry(master)
+        portEditBox.grid(padx=10, pady=10)
+        portEditBox.pack()
         self.createWidgets()
         self.pack(fill=BOTH, expand=1)
 
+    def connectDevice(self):
+        global portValue
+        portValue = portEditBox.get()
+        self.ser = serial.Serial(port=portValue, baudrate=9600, timeout=60)
+        print self.ser.name
+        self.readThread = threading.Thread(target=self.readDataFromDevice)
+        self.readThread.start()
+
+    def readDataFromDevice(self):
+        startDT = datetime.datetime.now()
+        print (str(startDT))
+        while True:
+            data = []
+            data.append(self.ser.readline())
+            logTime = datetime.datetime.now()
+            print data 
+            print (str(logTime))
+
+    def quitApp(self):
+        # self.readThread
+        print ("QUITTING APP")
+        self.quit()
+        
     def createWidgets(self):
     
         self.LEXCEL = Button(self)
         self.LEXCEL["text"] = "CONNECT DEVICE"
         self.LEXCEL.pack({"side": "left"})
+        self.LEXCEL["command"] = self.connectDevice
         self.LEXCEL.grid(row=0, column=0)
 
         self.DOWNLINK = Button(self)
@@ -45,7 +76,7 @@ class Application(Frame):
 
         self.QUIT = Button(self)
         self.QUIT["text"] = "EXIT APP"
-        self.QUIT["command"] =  self.quit
+        self.QUIT["command"] =  self.quitApp
         self.QUIT.pack({"side": "left"})
         self.QUIT.grid(row=4, column=0)
 
