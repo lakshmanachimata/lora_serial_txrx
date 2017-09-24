@@ -43,10 +43,6 @@ class Application(Frame):
         deviceIDText.insert(END, "Device ID")
         deviceIDText.config(state='disabled')
 
-        self.deviceIDTextVal = Text(master, height=2, width=25)
-        self.deviceIDTextVal.place(relx=0.3, rely=0.09)
-        self.deviceIDTextVal.config(state='disabled')
-
         global portEditBox
         portEditBox = Entry(master)
         portEditBox.place(relx=0.3, rely=0.01)
@@ -118,7 +114,10 @@ class Application(Frame):
                     if(line.startswith('$dev:')):
                         devid = line.partition(':')[-1].rpartition('#')[0]
                         print ("DEVID IS  " + devid)
+                        self.deviceIDTextVal = Text(root, height=2, width=25)
+                        self.deviceIDTextVal.place(relx=0.3, rely=0.09)
                         self.deviceIDTextVal.insert(END, devid)
+                        self.deviceIDTextVal.config(state='disabled')
                     else:
                         data.append(line)
                         logTime = datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")
