@@ -15,7 +15,6 @@ global recvData
 global portValue
 global portEditBox
 global sendDataBox
-global deviceId
 
 class Application(Frame):
 
@@ -69,7 +68,8 @@ class Application(Frame):
         self.QUIT.pack({"side": "left"})
         self.QUIT.place(relx=0.9, rely=0.01)
 
-        self.sendLog = Text(master, borderwidth=2, height=40, width=100)
+        self.sendLog = Text(master, height=40, width=100)
+        self.sendLog.tag_configure('logdata',borderwidth=2)
         self.sendLog.place(relx=0.01, rely=0.15)
         self.sendLog.insert(END, "DATA LOG \n\n")
         # self.sendLog.config(state='disabled')
@@ -82,8 +82,13 @@ class Application(Frame):
 
         self.pack(fill=BOTH, expand=1)
 
+    def showErrorMessage(self, inmessage):
+        global errorMessage
+        errorMessage = Toplevel()
+        Label(errorMessage, text=inmessage).pack()
+        Button(errorMessage, text='OK', command=errorMessage.destroy).pack()
+
     def getID(self):
-        global deviceId
         self.ser.write('@connect!')
         self.isREading = True
         self.readThread = threading.Thread(target=self.readDataFromDevice)
@@ -93,9 +98,15 @@ class Application(Frame):
     def connectDevice(self):
         global portValue
         portValue = portEditBox.get()
-        self.ser = serial.Serial(port=portValue, baudrate=9600)
-        self.sendLog.insert("end", self.ser.name + "   Connected" + "\n")
-        self.getID()
+        if(len(portValue) <= 0):
+            self.showErrorMessage("Enter Valid PORT")
+            return
+        try:
+            self.ser = serial.Serial(port=portValue, baudrate=9600)
+            self.sendLog.insert("end", self.ser.name + "   Connected" + "\n")
+            self.getID()
+        except serial.SerialException:
+            self.showErrorMessage("Enter Valid PORT")
 
     def writeDataToDevice(self):
         global sendDataBox
@@ -111,18 +122,36 @@ class Application(Frame):
                 data = []
                 line = self.ser.readline()
                 if(len(line) > 0 and line != "\n"):
-                    if(line.startswith('$dev:')):
-                        devid = line.partition(':')[-1].rpartition('#')[0]
-                        print ("DEVID IS  " + devid)
-                        self.deviceIDTextVal = Text(root, height=2, width=25)
-                        self.deviceIDTextVal.place(relx=0.3, rely=0.09)
-                        self.deviceIDTextVal.insert(END, devid)
-                        self.deviceIDTextVal.config(state='disabled')
+                    logLine = ''
+                    recvData = False
+                    line = line.replace('\n', ' ')
+                    print line
+                    if(line.startswith('TX in progress')):
+                        logLine = logLine + line  + '  ' + \
+                            datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S") 
+                        data.append(logLine)
+                    elif(line.startswith('$dev:')):
+                            devid = line.partition(':')[-1].rpartition('#')[0]
+                            self.deviceIDTextVal = Text(root, height=2, width=25)
+                            self.deviceIDTextVal.place(relx=0.3, rely=0.09)
+                            self.deviceIDTextVal.insert(END, devid.upper())
+                            # self.deviceIDTextVal.config(state='disabled')
+                    elif(line.startswith('TX done')):
+                        logLine = logLine + line + sendDataBox.get() + '  ' + \
+                            datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S") 
+                        data.append(logLine)
+                    elif(line.startswith('downlink:')):
+                        recvData = True
                     else:
-                        data.append(line)
-                        logTime = datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")
-                        data.append("   ")
-                        data.append(str(logTime))
+                        if(recvData == True):
+                            logLine = logLine +'RX came' + line + '  ' + \
+                                datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S") 
+                        else:
+                            data.append(line)
+                            logLine = logLine + line + '  ' + \
+                                datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S") 
+                            data.append(logLine)
+                    if(len(data) > 0):
                         self.sendLog.insert("end", data)
                         self.sendLog.insert("end", "\n")
                 else:
