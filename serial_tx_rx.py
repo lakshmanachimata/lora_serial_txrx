@@ -114,7 +114,7 @@ class Application(Frame):
             try:
                 data = []
                 line = self.ser.readline()
-                if(len(line) > 0):
+                if(len(line) > 0 and line != "\n"):
                     if(line.startswith('$dev:')):
                         devid = line.partition(':')[-1].rpartition('#')[0]
                         print ("DEVID IS  " + devid)
