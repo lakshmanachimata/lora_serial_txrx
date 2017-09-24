@@ -8,13 +8,13 @@ from tkMessageBox import *
 import binascii
 import datetime
 import threading
-
+import time
 
 global sendData
 global recvData
 global portValue
 global portEditBox
-
+global sendDataBox
 
 class Application(Frame):
 
@@ -24,17 +24,44 @@ class Application(Frame):
         master.minsize(width=800, height=800)
         master.maxsize(width=800, height=800)
         self.grid(padx=0, pady=0)
-        T = Text(master, height=2, width=25)
-        T.pack()
-        T.insert(END, "Enter COM Here")
-        T.config(state='disabled')
-        self.DATAT = Text(root, height=10, width=70)
-        self.DATAT.pack()
+        # self.DATAT = Text(root, height=10, width=70)
+        # self.DATAT.place(relx=, rely=2.5)
+
+        comText = Text(master, height=2, width=25)
+        comText.place(relx=0.1, rely=0.01)
+        comText.insert(END, "Enter COM Here")
+        comText.config(state='disabled')
+
+        sendText = Text(master, height=2, width=25)
+        sendText.place(relx=0.1, rely=0.05)
+        sendText.insert(END, "Enter DATA Here")
+        sendText.config(state='disabled')
+
         global portEditBox
         portEditBox = Entry(master)
-        portEditBox.grid(padx=10, pady=10)
-        portEditBox.pack()
-        self.createWidgets()
+        portEditBox.place(relx=0.3, rely=0.01)
+
+        global sendDataBox
+        sendDataBox = Entry(master)
+        sendDataBox.place(relx=0.3, rely=0.05)
+
+        self.CONNECT = Button(self)
+        self.CONNECT["text"] = "Connect"
+        self.CONNECT.pack({"side": "left"})
+        self.CONNECT["command"] = self.connectDevice
+        self.CONNECT.place(relx=0.6, rely=0.01)
+
+        self.SENDDATA = Button(self)
+        self.SENDDATA["text"] = "Send"
+        self.SENDDATA.pack({"side": "left"})
+        self.SENDDATA.place(relx=0.6, rely=0.05)
+
+        self.QUIT = Button(self)
+        self.QUIT["text"] = "EXIT"
+        self.QUIT["command"] = self.quitApp
+        self.QUIT.pack({"side": "left"})
+        self.QUIT.place(relx=0.9, rely=0.01)
+
         self.pack(fill=BOTH, expand=1)
 
     def connectDevice(self):
@@ -42,43 +69,42 @@ class Application(Frame):
         portValue = portEditBox.get()
         self.ser = serial.Serial(port=portValue, baudrate=9600, timeout=60)
         print self.ser.name
+        self.isREading = True
         self.readThread = threading.Thread(target=self.readDataFromDevice)
         self.readThread.start()
+
+
+    def writeDataToDevice(self,data):
+        writeData = '$' + data + '#'
+        self.ser.write(writeData)
+
 
     def readDataFromDevice(self):
         startDT = datetime.datetime.now()
         print (str(startDT))
-        while True:
-            data = []
-            data.append(self.ser.readline())
-            logTime = datetime.datetime.now()
-            print data 
-            print (str(logTime))
+        while self.isREading:
+            try:
+                data = []
+                data.append(self.ser.readline())
+                logTime = datetime.datetime.now()
+                data.append("          ")
+                data.append(str(logTime))
+                print data 
+            except serial.SerialException:
+                print("SERIAL EXCEPTION HANDLED")
 
     def quitApp(self):
-        # self.readThread
+        self.isREading = False
+        time.sleep(1)
+        
+        if hasattr(self, 'ser'):
+            print ("CLOSING DEVICE CONNECTION")
+            self.ser.close()
+
         print ("QUITTING APP")
         self.quit()
-        
-    def createWidgets(self):
-    
-        self.LEXCEL = Button(self)
-        self.LEXCEL["text"] = "CONNECT DEVICE"
-        self.LEXCEL.pack({"side": "left"})
-        self.LEXCEL["command"] = self.connectDevice
-        self.LEXCEL.grid(row=0, column=0)
+            
 
-        self.DOWNLINK = Button(self)
-        self.DOWNLINK["text"] = "SEND DOWN LINK"
-        self.DOWNLINK.pack({"side": "left"})
-        self.DOWNLINK.grid(row=2, column=0)
-        
-
-        self.QUIT = Button(self)
-        self.QUIT["text"] = "EXIT APP"
-        self.QUIT["command"] =  self.quitApp
-        self.QUIT.pack({"side": "left"})
-        self.QUIT.grid(row=4, column=0)
 
 
 root = Tk()
