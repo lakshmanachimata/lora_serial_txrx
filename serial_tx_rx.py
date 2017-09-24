@@ -15,6 +15,7 @@ global recvData
 global portValue
 global portEditBox
 global sendDataBox
+global deviceId
 
 class Application(Frame):
 
@@ -63,24 +64,31 @@ class Application(Frame):
         self.QUIT.pack({"side": "left"})
         self.QUIT.place(relx=0.9, rely=0.01)
 
-        self.sendLog = Text(master, borderwidth=2, height=40, width=50)
+        self.sendLog = Text(master, borderwidth=2, height=40, width=100)
         self.sendLog.place(relx=0.01, rely=0.15)
-        self.sendLog.insert(END, "Sent Data \n")
+        self.sendLog.insert(END, "DATA LOG \n\n")
         # self.sendLog.config(state='disabled')
 
-        self.recvLog = Text(master, height=40, width=50)
-        self.recvLog.place(relx=0.51, rely=0.15)
-        self.recvLog.insert(END, "Recv Data \n")
+        # self.recvLog = Text(master, height=40, width=50)
+        # self.recvLog.place(relx=0.51, rely=0.15)
+        # self.recvLog.insert(END, "Recv Data \n")
         # self.sendLog.config(state='disabled')
 
 
         self.pack(fill=BOTH, expand=1)
 
+    def getID(self):
+        global deviceId
+        self.ser.write('@connect!')
+        iddata = self.ser.readline()
+        print iddata
+
     def connectDevice(self):
         global portValue
         portValue = portEditBox.get()
-        self.ser = serial.Serial(port=portValue, baudrate=9600, timeout=60)
-        print self.ser.name
+        self.ser = serial.Serial(port=portValue, baudrate=9600)
+        self.sendLog.insert("end", self.ser.name + "   Connected" + "\n")
+        self.getID()
         self.isREading = True
         self.readThread = threading.Thread(target=self.readDataFromDevice)
         self.readThread.start()
@@ -101,10 +109,10 @@ class Application(Frame):
                 data = []
                 data.append(self.ser.readline())
                 logTime = datetime.datetime.now()
-                data.append(":::")
+                data.append("   ")
                 data.append(str(logTime))
-                self.recvLog.insert("end", data)
-                self.recvLog.insert("end", "\n")
+                self.sendLog.insert("end", data)
+                self.sendLog.insert("end", "\n")
             except serial.SerialException:
                 print("SERIAL EXCEPTION HANDLED")
 
